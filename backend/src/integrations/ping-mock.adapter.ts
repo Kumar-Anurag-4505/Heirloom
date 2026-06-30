@@ -206,6 +206,16 @@ export class PingMockAdapter implements IPingIdentityProvider {
   }
 
   async syncDirectoryUser(userProfile: UserProfile): Promise<DirectorySyncResult> {
+    // Check if email already exists in mockDirectory to prevent duplicate entries and keep IDs consistent
+    for (const [id, profile] of this.mockDirectory.entries()) {
+      if (profile.email.toLowerCase() === userProfile.email.toLowerCase()) {
+        return {
+          success: true,
+          pingUserId: id
+        };
+      }
+    }
+
     const pingUserId = 'ping-usr-' + crypto.randomBytes(6).toString('hex');
     this.mockDirectory.set(pingUserId, {
       email: userProfile.email,

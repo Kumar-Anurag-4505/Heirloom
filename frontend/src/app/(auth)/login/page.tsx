@@ -180,7 +180,7 @@ export default function LoginPage() {
 
                 <div className="mt-8 text-center text-xs text-neutral-500">
                   New to Heirloom?{' '}
-                  <Link href="/auth/register" className="text-blue-400 hover:underline">
+                  <Link href="/register" className="text-blue-400 hover:underline">
                     Create directory account
                   </Link>
                 </div>

@@ -79,7 +79,7 @@ export class AuthController {
       // Ensure local directory has local User synced.
       // In local dev mock mode, register user if they do not exist locally.
       let user = await prisma.user.findUnique({
-        where: { id: authResult.pingUserId }
+        where: { email: authResult.email }
       });
 
       if (!user) {
@@ -89,6 +89,11 @@ export class AuthController {
             email: authResult.email,
             name: authResult.name
           }
+        });
+      } else if (user.id !== authResult.pingUserId) {
+        user = await prisma.user.update({
+          where: { email: authResult.email },
+          data: { id: authResult.pingUserId }
         });
       }
 

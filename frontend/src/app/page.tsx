@@ -43,10 +43,10 @@ export default function LandingPage() {
           </nav>
 
           <div className="flex items-center space-x-4">
-            <Link href="/auth/login" className="text-sm font-medium text-neutral-400 hover:text-white transition-colors px-3 py-2">
+            <Link href="/login" className="text-sm font-medium text-neutral-400 hover:text-white transition-colors px-3 py-2">
               Log in
             </Link>
-            <Link href="/auth/register" className="glow-button px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-lg shadow-blue-500/20 transition-all border border-blue-400/20">
+            <Link href="/register" className="glow-button px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-lg shadow-blue-500/20 transition-all border border-blue-400/20">
               Get Started
             </Link>
           </div>
@@ -79,7 +79,7 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <Link href="/auth/register" className="w-full sm:w-auto px-6 py-3 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all border border-blue-400/20">
+            <Link href="/register" className="w-full sm:w-auto px-6 py-3 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all border border-blue-400/20">
               Set Up Legacy Vault
               <ArrowRight className="w-4 h-4" />
             </Link>

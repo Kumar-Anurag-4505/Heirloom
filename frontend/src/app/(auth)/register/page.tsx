@@ -36,7 +36,7 @@ export default function RegisterPage() {
 
       setIsSuccess(true);
       setTimeout(() => {
-        router.push('/auth/login');
+        router.push('/login');
       }, 2000);
     } catch (err) {
       setError('Connection to security gateway timed out');
@@ -153,7 +153,7 @@ export default function RegisterPage() {
 
                 <div className="mt-8 text-center text-xs text-neutral-500">
                   Already have an account?{' '}
-                  <Link href="/auth/login" className="text-blue-400 hover:underline">
+                  <Link href="/login" className="text-blue-400 hover:underline">
                     Sign in
                   </Link>
                 </div>
