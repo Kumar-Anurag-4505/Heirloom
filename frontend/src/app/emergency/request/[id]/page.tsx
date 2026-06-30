@@ -13,6 +13,7 @@ import {
   Database
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { api } from '@/lib/api';
 
 export default function RequestTimelinePage() {
   const params = useParams();
@@ -29,10 +30,7 @@ export default function RequestTimelinePage() {
 
   const fetchRequestDetails = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/emergency/${requestId}`, {
-        headers: { 'Authorization': 'Bearer mock-pass' }
-      });
-      const result = await response.json();
+      const result = await api.get(`/emergency/${requestId}`);
       if (result.success) {
         setRequest(result.data);
       }
@@ -56,16 +54,7 @@ export default function RequestTimelinePage() {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/emergency/${requestId}/evidence`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock-pass'
-        },
-        body: JSON.stringify({ documentUrl })
-      });
-
-      const result = await response.json();
+      const result = await api.post(`/emergency/${requestId}/evidence`, { documentUrl });
 
       if (!result.success) {
         setError(result.message || 'Failed to link evidence document');

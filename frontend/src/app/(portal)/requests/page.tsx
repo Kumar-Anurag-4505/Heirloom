@@ -14,6 +14,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { api } from '@/lib/api';
 
 interface EmergencyRequest {
   id: string;
@@ -33,10 +34,7 @@ export default function RequestsPage() {
   const fetchRequests = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/v1/emergency/requests', {
-        headers: { 'Authorization': 'Bearer mock-pass' }
-      });
-      const result = await response.json();
+      const result = await api.get('/emergency/requests');
       if (result.success) {
         setRequests(result.data);
       }
@@ -53,18 +51,14 @@ export default function RequestsPage() {
 
   const handleAction = async (requestId: string, action: 'approve' | 'reject') => {
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/emergency/${requestId}/${action}`, {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer mock-pass' }
-      });
-      const result = await response.json();
+      const result = await api.post(`/emergency/${requestId}/${action}`);
       if (result.success) {
         await fetchRequests();
       } else {
         setError(result.message || `Failed to ${action} request`);
       }
-    } catch (err) {
-      setError(`Access gateway dispatch error during ${action}`);
+    } catch (err: any) {
+      setError(err.message || `Access gateway dispatch error during ${action}`);
     }
   };
 

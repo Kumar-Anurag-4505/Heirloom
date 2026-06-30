@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import { 
   Shield, 
   LayoutDashboard, 
@@ -19,26 +20,13 @@ import {
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-
-  const [activeUser, setActiveUser] = useState({ name: 'Rahul Sharma', email: 'rahul@heirloom.io' });
+  const { user, logout, isLoading } = useAuth();
 
   useEffect(() => {
-    const fetchMe = async () => {
-      try {
-        const response = await fetch('http://localhost:3001/api/v1/auth/me');
-        const result = await response.json();
-        if (result.success && result.data) {
-          setActiveUser({
-            name: result.data.name,
-            email: result.data.email
-          });
-        }
-      } catch (err) {
-        console.warn('Failed to fetch session. Defaulting to Rahul Sharma.');
-      }
-    };
-    fetchMe();
-  }, []);
+    if (!isLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isLoading, router]);
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -48,14 +36,14 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     { name: 'Emergency Requests', href: '/requests', icon: ShieldAlert },
   ];
 
-  const handleLogout = async () => {
-    try {
-      await fetch('http://localhost:3001/api/v1/auth/logout', { method: 'POST' });
-      router.push('/');
-    } catch (error) {
-      router.push('/');
-    }
-  };
+  if (isLoading || !user) {
+    return (
+      <div className="flex h-screen w-screen bg-black items-center justify-center text-neutral-500 space-y-3 flex-col">
+        <Activity className="w-8 h-8 animate-spin text-blue-500" />
+        <span className="text-xs font-mono">Verifying credentials session scopes...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-black overflow-hidden font-sans selection:bg-blue-600/30">
@@ -75,8 +63,6 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
-
-
 
               return (
                 <Link
@@ -99,17 +85,17 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         {/* User Session Details Bottom Card */}
         <div className="p-4 border-t border-white/5 space-y-3">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-full bg-blue-900/30 border border-blue-500/20 flex items-center justify-center">
-              <UserIcon className="w-4 h-4 text-blue-400" />
+            <div className="w-8 h-8 rounded-full bg-blue-900/30 border border-blue-500/20 flex items-center justify-center text-xs font-bold text-blue-400">
+              {user.avatar}
             </div>
             <div className="overflow-hidden">
-              <p className="text-xs font-semibold text-white truncate">{activeUser.name}</p>
-              <p className="text-[10px] text-neutral-500 truncate">{activeUser.email}</p>
+              <p className="text-xs font-semibold text-white truncate">{user.name}</p>
+              <p className="text-[10px] text-neutral-500 truncate">{user.email}</p>
             </div>
           </div>
 
           <button
-            onClick={handleLogout}
+            onClick={logout}
             className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-white/5 hover:bg-red-950/20 hover:border-red-500/30 text-xs font-semibold text-neutral-400 hover:text-red-400 transition-all"
           >
             <LogOut className="w-3.5 h-3.5" />
@@ -143,7 +129,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           </div>
         </header>
 
-        {/* Content Panel */}
+        {/* Content Canvas */}
         <main className="flex-grow overflow-y-auto bg-black p-8">
           {children}
         </main>

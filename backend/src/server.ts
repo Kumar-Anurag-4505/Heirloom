@@ -10,6 +10,7 @@ import { contactController } from './controllers/contact.controller';
 import { policyController } from './controllers/policy.controller';
 import { emergencyController } from './controllers/emergency.controller';
 import { adminController } from './controllers/admin.controller';
+import { dashboardController } from './controllers/dashboard.controller';
 import { validateRequest } from './middlewares/validation.middleware';
 import { requireAuth } from './middlewares/auth.middleware';
 import { registerSchema, loginSchema, verifyMfaSchema } from './validators/auth.validator';
@@ -65,8 +66,13 @@ app.post('/api/v1/emergency/:id/evidence', requireAuth, emergencyController.uplo
 app.post('/api/v1/emergency/:id/approve', requireAuth, emergencyController.approve);
 app.post('/api/v1/emergency/:id/reject', requireAuth, emergencyController.reject);
 app.get('/api/v1/emergency/requests', requireAuth, emergencyController.list);
+app.get('/api/v1/emergency/eligible-policies', requireAuth, emergencyController.getAvailablePolicies);
 app.get('/api/v1/emergency/:id', requireAuth, emergencyController.get);
 app.get('/api/v1/emergency/vault/:token', emergencyController.getVaultByToken); // Token-scoped public access route
+
+// Initialize Dashboard & Personal Audit Log Routes
+app.get('/api/v1/dashboard/summary', requireAuth, dashboardController.getSummary);
+app.get('/api/v1/audit/me', requireAuth, dashboardController.getMyAuditLogs);
 
 // Initialize Admin Monitoring Routes
 app.get('/api/v1/admin/metrics', requireAuth, adminController.getMetrics);

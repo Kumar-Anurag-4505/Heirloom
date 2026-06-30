@@ -18,6 +18,7 @@ import {
   X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { api } from '@/lib/api';
 
 interface Asset {
   id: string;
@@ -51,12 +52,7 @@ export default function AssetsPage() {
   const fetchAssets = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/v1/assets', {
-        headers: {
-          'Authorization': 'Bearer mock-pass'
-        }
-      });
-      const result = await response.json();
+      const result = await api.get('/assets');
       if (result.success) {
         setAssets(result.data);
       }
@@ -77,22 +73,13 @@ export default function AssetsPage() {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3001/api/v1/assets', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock-pass'
-        },
-        body: JSON.stringify({
-          title,
-          description,
-          category,
-          sensitivityRisk,
-          plaintextPayload
-        })
+      const result = await api.post('/assets', {
+        title,
+        description,
+        category,
+        sensitivityRisk,
+        plaintextPayload
       });
-
-      const result = await response.json();
 
       if (!result.success) {
         setError(result.message || 'Failed to protect asset');
@@ -107,8 +94,8 @@ export default function AssetsPage() {
       setSensitivityRisk('MEDIUM');
       setPlaintextPayload('');
       setIsModalOpen(false);
-    } catch (err) {
-      setError('Communication with key orchestration server timed out');
+    } catch (err: any) {
+      setError(err.message || 'Communication with key orchestration server timed out');
     } finally {
       setIsFormSubmitting(false);
     }
@@ -122,10 +109,7 @@ export default function AssetsPage() {
   const handleDecryptPayload = async (assetId: string) => {
     setIsDecrypting(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/assets/${assetId}`, {
-        headers: { 'Authorization': 'Bearer mock-pass' }
-      });
-      const result = await response.json();
+      const result = await api.get(`/assets/${assetId}`);
       if (result.success && result.data.decryptedPayload) {
         setDecryptedValue(result.data.decryptedPayload);
       } else {
@@ -141,10 +125,7 @@ export default function AssetsPage() {
   const handleDeleteAsset = async (assetId: string) => {
     if (!confirm('Are you sure you want to permanently delete this protected asset?')) return;
     try {
-      await fetch(`http://localhost:3001/api/v1/assets/${assetId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': 'Bearer mock-pass' }
-      });
+      await api.delete(`/assets/${assetId}`);
       setInspectingAsset(null);
       await fetchAssets();
     } catch (err) {

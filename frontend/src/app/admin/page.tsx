@@ -15,6 +15,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { api } from '@/lib/api';
 
 interface AuditLog {
   id: string;
@@ -36,13 +37,10 @@ export default function AdminConsolePage() {
 
   const fetchAdminData = async () => {
     try {
-      const [metricsRes, logsRes] = await Promise.all([
-        fetch('http://localhost:3001/api/v1/admin/metrics', { headers: { 'Authorization': 'Bearer mock-pass' } }),
-        fetch('http://localhost:3001/api/v1/admin/logs', { headers: { 'Authorization': 'Bearer mock-pass' } })
+      const [metricsResult, logsResult] = await Promise.all([
+        api.get('/admin/metrics'),
+        api.get('/admin/logs')
       ]);
-
-      const metricsResult = await metricsRes.json();
-      const logsResult = await logsRes.json();
 
       if (metricsResult.success) setMetrics(metricsResult.data);
       if (logsResult.success) setLogs(logsResult.data);

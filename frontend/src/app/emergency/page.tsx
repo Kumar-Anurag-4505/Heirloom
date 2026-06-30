@@ -4,9 +4,12 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShieldAlert, Loader2, ArrowRight, AlertTriangle, UserCheck, Key } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { api } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 
 export default function EmergencyLandingPage() {
   const router = useRouter();
+  const { user } = useAuth();
   
   // Simulation Step States
   const [step, setStep] = useState<1 | 2>(1);
@@ -26,26 +29,17 @@ export default function EmergencyLandingPage() {
     setError(null);
 
     try {
-      // In mock local development, fetch active policies configured by the owner
-      // Since backend supports listing, let's look up policies.
-      // We simulate lookup of policies matching the target owner
-      const response = await fetch('http://localhost:3001/api/v1/policies', {
-        headers: { 'Authorization': 'Bearer mock-pass' }
-      });
-      const result = await response.json();
+      const result = await api.get(`/emergency/eligible-policies?ownerEmail=${ownerEmail}`);
       
-      if (result.success && Array.isArray(result.data)) {
-        // Filter policies matching owner or relations
+      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
         setPolicies(result.data);
-        if (result.data.length > 0) {
-          setSelectedPolicyId(result.data[0].id);
-        }
+        setSelectedPolicyId(result.data[0].id);
         setStep(2);
       } else {
-        setError('No conditional legacy policies found for this owner.');
+        setError('No eligible legacy policies found for this owner relation.');
       }
-    } catch (err) {
-      setError('Target owner verification connection failed');
+    } catch (err: any) {
+      setError(err.message || 'Target owner verification connection failed');
     } finally {
       setIsLoading(false);
     }
@@ -53,25 +47,28 @@ export default function EmergencyLandingPage() {
 
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      setError('Please authenticate prior to submitting a legacy claim request');
+      return;
+    }
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3001/api/v1/emergency/request', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock-pass'
-        },
-        body: JSON.stringify({
-          policyId: selectedPolicyId,
-          ownerPingId: 'ping-usr-rahul', // Mock owner id resolved
-          requesterPingId: 'ping-usr-priya', // Mock requester ID (Priya)
-          urgencyReason
-        })
-      });
+      const targetPolicy = policies.find(p => p.id === selectedPolicyId);
+      const ownerPingId = targetPolicy?.ownerPingId;
 
-      const result = await response.json();
+      if (!ownerPingId) {
+        setError('Target owner session identifier unresolved');
+        return;
+      }
+
+      const result = await api.post('/emergency/request', {
+        policyId: selectedPolicyId,
+        ownerPingId,
+        requesterPingId: user.id,
+        urgencyReason
+      });
 
       if (!result.success) {
         setError(result.message || 'Failed to submit request');
@@ -79,8 +76,8 @@ export default function EmergencyLandingPage() {
       }
 
       router.push(`/emergency/request/${result.data.id}`);
-    } catch (err) {
-      setError('Access gateway submission timed out');
+    } catch (err: any) {
+      setError(err.message || 'Access gateway submission timed out');
     } finally {
       setIsLoading(false);
     }

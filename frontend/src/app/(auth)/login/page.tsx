@@ -3,11 +3,13 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import { Shield, Lock, Eye, EyeOff, Loader2, KeyRound, AlertCircle, Smartphone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { initializeSession } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -47,6 +49,7 @@ export default function LoginPage() {
         setRiskScore(result.data.riskScore);
       } else {
         // Successful login without MFA
+        initializeSession(result.data.token, result.data.user);
         router.push('/dashboard');
       }
     } catch (err) {
@@ -76,6 +79,7 @@ export default function LoginPage() {
       }
 
       // MFA successfully completed
+      initializeSession(result.data.token, result.data.user);
       router.push('/dashboard');
     } catch (err) {
       setError('MFA gateway verification timeout');

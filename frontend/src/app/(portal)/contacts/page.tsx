@@ -14,6 +14,7 @@ import {
   X 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { api } from '@/lib/api';
 
 interface Contact {
   id: string;
@@ -41,10 +42,7 @@ export default function ContactsPage() {
   const fetchContacts = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/v1/contacts', {
-        headers: { 'Authorization': 'Bearer mock-pass' }
-      });
-      const result = await response.json();
+      const result = await api.get('/contacts');
       if (result.success) {
         setContacts(result.data);
       }
@@ -65,21 +63,12 @@ export default function ContactsPage() {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3001/api/v1/contacts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock-pass'
-        },
-        body: JSON.stringify({
-          contactName,
-          contactEmail,
-          relationship,
-          trustLevel
-        })
+      const result = await api.post('/contacts', {
+        contactName,
+        contactEmail,
+        relationship,
+        trustLevel
       });
-
-      const result = await response.json();
 
       if (!result.success) {
         setError(result.message || 'Failed to register contact');
@@ -92,8 +81,8 @@ export default function ContactsPage() {
       setRelationship('SPOUSE');
       setTrustLevel('LEVEL_1_IMMEDIATE');
       setIsModalOpen(false);
-    } catch (err) {
-      setError('Communication with authentication directory server failed');
+    } catch (err: any) {
+      setError(err.message || 'Communication with authentication directory server failed');
     } finally {
       setIsSubmitting(false);
     }
@@ -101,11 +90,7 @@ export default function ContactsPage() {
 
   const handleSimulateVerify = async (contactId: string) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/contacts/${contactId}/verify`, {
-        method: 'PUT',
-        headers: { 'Authorization': 'Bearer mock-pass' }
-      });
-      const result = await response.json();
+      const result = await api.put(`/contacts/${contactId}/verify`);
       if (result.success) {
         await fetchContacts();
       }
@@ -117,10 +102,7 @@ export default function ContactsPage() {
   const handleDelete = async (contactId: string) => {
     if (!confirm('Are you sure you want to remove this emergency contact?')) return;
     try {
-      await fetch(`http://localhost:3001/api/v1/contacts/${contactId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': 'Bearer mock-pass' }
-      });
+      await api.delete(`/contacts/${contactId}`);
       await fetchContacts();
     } catch (err) {
       setError('Failed to delete contact record');

@@ -1,0 +1,22 @@
+# Implementation Tasks - Dynamic Dashboard and Centralized Auth
+
+- [x] Backend Refactoring
+  - [x] Implement `GET /api/v1/dashboard/summary` endpoint
+  - [x] Implement `GET /api/v1/audit/me` endpoint
+  - [x] Register new endpoints in `server.ts` behind `requireAuth`
+- [x] Frontend Architectural Core
+  - [x] Implement central API client helper (`src/lib/api.ts`) attaching JWT tokens automatically
+  - [x] Update `AuthContext.tsx` to handle profile session states and link with the API client
+- [x] Frontend Pages Refactoring
+  - [x] Update `(portal)/layout.tsx` to display active user dynamic avatar and email
+  - [x] Update `(portal)/dashboard/page.tsx` to fetch stats and logs from the new backend endpoints
+  - [x] Update `(portal)/assets/page.tsx` to use the central API client
+  - [x] Update `(portal)/contacts/page.tsx` to use the central API client
+  - [x] Update `(portal)/policies/page.tsx` to use the central API client
+  - [x] Update `(portal)/requests/page.tsx` to use the central API client
+  - [x] Update `admin/page.tsx` to use the central API client
+  - [x] Update `emergency/page.tsx` to use the central API client
+  - [x] Update `emergency/request/[id]/page.tsx` to use the central API client
+- [x] Verification and Deployment
+  - [x] Rebuild and run Docker containers
+  - [x] Manually register "Kumar Anurag", login, and verify correct dynamic dashboard metrics rendering

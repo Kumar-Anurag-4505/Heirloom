@@ -16,6 +16,7 @@ import {
   X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { api } from '@/lib/api';
 
 interface Asset {
   id: string;
@@ -58,13 +59,10 @@ export default function PoliciesPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [policiesRes, assetsRes] = await Promise.all([
-        fetch('http://localhost:3001/api/v1/policies', { headers: { 'Authorization': 'Bearer mock-pass' } }),
-        fetch('http://localhost:3001/api/v1/assets', { headers: { 'Authorization': 'Bearer mock-pass' } })
+      const [policiesData, assetsData] = await Promise.all([
+        api.get('/policies'),
+        api.get('/assets')
       ]);
-      
-      const policiesData = await policiesRes.json();
-      const assetsData = await assetsRes.json();
 
       if (policiesData.success) setPolicies(policiesData.data);
       if (assetsData.success) setAssets(assetsData.data);
@@ -90,33 +88,24 @@ export default function PoliciesPage() {
   const handleCreatePolicy = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedAssetIds.length === 0) {
-      setError('Please select at least one asset to protect under this policy');
+      setError('Please bind at least one vault asset to this access rule');
       return;
     }
     setIsSubmitting(true);
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3001/api/v1/policies', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock-pass'
-        },
-        body: JSON.stringify({
-          name,
-          description,
-          targetRelationship,
-          eventTrigger,
-          maxRiskThreshold,
-          requiresVerifier,
-          timeDelayHours: Number(timeDelayHours),
-          durationHours: Number(durationHours),
-          assetIds: selectedAssetIds
-        })
+      const result = await api.post('/policies', {
+        name,
+        description,
+        targetRelationship,
+        eventTrigger,
+        maxRiskThreshold,
+        requiresVerifier,
+        timeDelayHours: Number(timeDelayHours),
+        durationHours: Number(durationHours),
+        assetIds: selectedAssetIds
       });
-
-      const result = await response.json();
 
       if (!result.success) {
         setError(result.message || 'Failed to compile visual policy');
@@ -134,8 +123,8 @@ export default function PoliciesPage() {
       setDurationHours(24);
       setSelectedAssetIds([]);
       setIsModalOpen(false);
-    } catch (err) {
-      setError('Policy engine compilation dispatch failed');
+    } catch (err: any) {
+      setError(err.message || 'Policy engine compilation dispatch failed');
     } finally {
       setIsSubmitting(false);
     }
@@ -144,10 +133,7 @@ export default function PoliciesPage() {
   const handleDeletePolicy = async (policyId: string) => {
     if (!confirm('Are you sure you want to permanently delete this access policy?')) return;
     try {
-      await fetch(`http://localhost:3001/api/v1/policies/${policyId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': 'Bearer mock-pass' }
-      });
+      await api.delete(`/policies/${policyId}`);
       await fetchData();
     } catch (err) {
       setError('Failed to revoke policy');

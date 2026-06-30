@@ -13,6 +13,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { api } from '@/lib/api';
 
 interface Asset {
   id: string;
@@ -21,6 +22,7 @@ interface Asset {
   category: string;
   sensitivityRisk: string;
   decryptedPayload?: string;
+  createdAt: string;
 }
 
 export default function TemporaryVaultPage() {
@@ -38,8 +40,7 @@ export default function TemporaryVaultPage() {
 
   const fetchVault = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/v1/emergency/vault/${token}`);
-      const result = await response.json();
+      const result = await api.get(`/emergency/vault/${token}`);
       
       if (!result.success) {
         setError(result.message || 'Access Scope Expired or Revoked.');
@@ -49,8 +50,8 @@ export default function TemporaryVaultPage() {
 
       setAssets(result.data.assets);
       setExpiresAt(result.data.expiresAt);
-    } catch (err) {
-      setError('Connection to security gateway failed.');
+    } catch (err: any) {
+      setError(err.message || 'Connection to security gateway failed.');
     } finally {
       setIsLoading(false);
     }

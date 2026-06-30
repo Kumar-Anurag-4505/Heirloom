@@ -482,5 +482,98 @@ export class EmergencyController {
       next(error);
     }
   };
+
+  public getAvailablePolicies = async (req: UserRequest, res: Response, next: NextFunction): Promise<void> => {
+    const requestId = crypto.randomUUID();
+    try {
+      const requesterPingId = req.user?.sub;
+      const { ownerEmail } = req.query;
+
+      if (!requesterPingId) {
+        res.status(401).json({
+          success: false,
+          message: 'User session not found',
+          data: null,
+          timestamp: new Date().toISOString(),
+          requestId
+        });
+        return;
+      }
+
+      if (!ownerEmail) {
+        res.status(400).json({
+          success: false,
+          message: 'Owner email query parameter is required',
+          data: null,
+          timestamp: new Date().toISOString(),
+          requestId
+        });
+        return;
+      }
+
+      // Resolve owner by email
+      const owner = await prisma.user.findUnique({
+        where: { email: ownerEmail as string }
+      });
+
+      if (!owner) {
+        res.status(404).json({
+          success: false,
+          message: 'Target legacy owner profile not found',
+          data: null,
+          timestamp: new Date().toISOString(),
+          requestId
+        });
+        return;
+      }
+
+      // Validate requester is a verified contact
+      const contact = await prisma.emergencyContact.findFirst({
+        where: {
+          ownerPingId: owner.id,
+          contactEmail: req.user?.email,
+          verificationStatus: 'VERIFIED'
+        }
+      });
+
+      if (!contact) {
+        res.status(403).json({
+          success: false,
+          message: 'Access Denied: You are not verified as an emergency contact for this owner',
+          data: null,
+          timestamp: new Date().toISOString(),
+          requestId
+        });
+        return;
+      }
+
+      // Retrieve policies matching relationship
+      const policies = await prisma.policy.findMany({
+        where: {
+          ownerPingId: owner.id,
+          targetRelationship: contact.relationship,
+          isEnabled: true
+        },
+        include: {
+          assets: {
+            include: {
+              asset: true
+            }
+          },
+          owner: true
+        }
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Eligible legacy policies retrieved successfully',
+        data: policies,
+        timestamp: new Date().toISOString(),
+        requestId
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 export const emergencyController = new EmergencyController();
