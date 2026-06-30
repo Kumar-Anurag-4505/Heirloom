@@ -40,6 +40,7 @@ app.post('/api/v1/auth/register', validateRequest(registerSchema), authControlle
 app.post('/api/v1/auth/login', validateRequest(loginSchema), authController.login);
 app.post('/api/v1/auth/mfa/verify', validateRequest(verifyMfaSchema), authController.verifyMfa);
 app.post('/api/v1/auth/logout', authController.logout);
+app.get('/api/v1/auth/me', requireAuth, authController.me);
 
 // Initialize Asset Core Routes
 app.post('/api/v1/assets', requireAuth, validateRequest(createAssetSchema), assetController.create);

@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { UserRequest } from '../middlewares/auth.middleware';
 import { getPingProvider } from '../integrations';
 import { prisma } from '../config/db';
 import * as jwt from 'jsonwebtoken';
@@ -13,6 +14,22 @@ export class AuthController {
     const requestId = crypto.randomUUID();
     try {
       const { email, name } = req.body;
+
+      // Check if email already registered in local database
+      const existingUser = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (existingUser) {
+        res.status(400).json({
+          success: false,
+          message: 'An account with this email address is already registered.',
+          data: null,
+          timestamp: new Date().toISOString(),
+          requestId
+        });
+        return;
+      }
 
       // 1. Sync User inside simulated Ping directory (PingDS)
       const syncResult = await this.pingProvider.syncDirectoryUser({ email, name });
@@ -245,5 +262,34 @@ export class AuthController {
       timestamp: new Date().toISOString(),
       requestId: crypto.randomUUID()
     });
+  };
+
+  public me = async (req: UserRequest, res: Response, next: NextFunction): Promise<void> => {
+    const requestId = crypto.randomUUID();
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'Session unauthorized',
+          data: null,
+          timestamp: new Date().toISOString(),
+          requestId
+        });
+        return;
+      }
+      res.status(200).json({
+        success: true,
+        message: 'Active profile retrieved successfully',
+        data: {
+          id: req.user.sub,
+          email: req.user.email,
+          name: req.user.name
+        },
+        timestamp: new Date().toISOString(),
+        requestId
+      });
+    } catch (error) {
+      next(error);
+    }
   };
 }

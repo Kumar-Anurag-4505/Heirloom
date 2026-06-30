@@ -92,6 +92,7 @@ export default function LandingPage() {
 
         {/* Dynamic Telemetry Visual Preview */}
         <motion.div 
+          id="telemetry"
           className="w-full max-w-5xl rounded-xl border border-white/5 bg-neutral-950/40 p-6 glass-panel relative overflow-hidden shadow-2xl shadow-blue-900/10 mb-24"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -164,7 +165,7 @@ export default function LandingPage() {
             viewport={{ once: true, margin: "-100px" }}
           >
             {/* Feature Card 1 */}
-            <motion.div className="p-6 rounded-xl border border-white/5 bg-neutral-950/30 hover:border-blue-500/20 transition-all flex flex-col justify-between" variants={itemVariants}>
+            <motion.div id="security" className="p-6 rounded-xl border border-white/5 bg-neutral-950/30 hover:border-blue-500/20 transition-all flex flex-col justify-between" variants={itemVariants}>
               <div className="w-10 h-10 rounded-lg bg-blue-600/10 border border-blue-500/20 flex items-center justify-center mb-6">
                 <Shield className="w-5 h-5 text-blue-400" />
               </div>
@@ -175,7 +176,7 @@ export default function LandingPage() {
             </motion.div>
 
             {/* Feature Card 2 */}
-            <motion.div className="p-6 rounded-xl border border-white/5 bg-neutral-950/30 hover:border-indigo-500/20 transition-all flex flex-col justify-between" variants={itemVariants}>
+            <motion.div id="matrix" className="p-6 rounded-xl border border-white/5 bg-neutral-950/30 hover:border-indigo-500/20 transition-all flex flex-col justify-between" variants={itemVariants}>
               <div className="w-10 h-10 rounded-lg bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center mb-6">
                 <Key className="w-5 h-5 text-indigo-400" />
               </div>

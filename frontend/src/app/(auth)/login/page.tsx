@@ -150,7 +150,16 @@ export default function LoginPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-neutral-400 mb-2">Password</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-semibold text-neutral-400">Password</label>
+                      <button
+                        type="button"
+                        onClick={() => alert("Self-Service Password Reset (PingIDM Flow)\n\nPassword reset delegates authorization scopes directly to the administrative OIDC/LDAP portal. In this mock workspace, please authenticate using any valid directory user's credentials.")}
+                        className="text-[10px] text-blue-400 hover:text-white transition-colors"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
                     <div className="relative">
                       <input
                         type={showPassword ? 'text' : 'password'}

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
@@ -19,6 +19,26 @@ import {
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const [activeUser, setActiveUser] = useState({ name: 'Rahul Sharma', email: 'rahul@heirloom.io' });
+
+  useEffect(() => {
+    const fetchMe = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/v1/auth/me');
+        const result = await response.json();
+        if (result.success && result.data) {
+          setActiveUser({
+            name: result.data.name,
+            email: result.data.email
+          });
+        }
+      } catch (err) {
+        console.warn('Failed to fetch session. Defaulting to Rahul Sharma.');
+      }
+    };
+    fetchMe();
+  }, []);
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -83,8 +103,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               <UserIcon className="w-4 h-4 text-blue-400" />
             </div>
             <div className="overflow-hidden">
-              <p className="text-xs font-semibold text-white truncate">Rahul Sharma</p>
-              <p className="text-[10px] text-neutral-500 truncate">rahul@heirloom.io</p>
+              <p className="text-xs font-semibold text-white truncate">{activeUser.name}</p>
+              <p className="text-[10px] text-neutral-500 truncate">{activeUser.email}</p>
             </div>
           </div>
 
