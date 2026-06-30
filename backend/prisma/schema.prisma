@@ -1,0 +1,184 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum AssetCategory {
+  BANKING
+  INSURANCE
+  MEDICAL
+  INVESTMENTS
+  STOCKS
+  MUTUAL_FUNDS
+  PROPERTY
+  CRYPTO
+  GOVERNMENT_IDS
+  PASSWORDS
+  CLOUD_ACCOUNTS
+  EMAIL
+  SOCIAL_MEDIA
+  SUBSCRIPTIONS
+  EMERGENCY_NOTES
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RequestStatus {
+  SUBMITTED
+  UNDER_VERIFIER_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
+  REVOKED
+}
+
+enum TrustLevel {
+  LEVEL_1_IMMEDIATE
+  LEVEL_2_DELAYED
+  VERIFIER_ONLY
+}
+
+model User {
+  id                String            @id // Matches Subject User ID from PingDS / PingAM
+  email             String            @unique
+  name              String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  assets            Asset[]
+  policies          Policy[]
+  emergencyRequests EmergencyRequest[] @relation("Requester")
+  ownedRequests     EmergencyRequest[] @relation("Owner")
+  verifierRequests  EmergencyRequest[] @relation("Verifier")
+}
+
+model Asset {
+  id                String            @id @default(uuid())
+  ownerPingId       String            // References User ID in database/PingDS
+  title             String
+  description       String?
+  category          AssetCategory
+  sensitivityRisk   RiskLevel         @default(MEDIUM)
+  encryptedPayload  String?           // Ciphertext for credentials/notes
+  storageKeyPath    String?           // Object storage URI for attached documents
+  metadataJson      Json?             // Additional dynamic attributes
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  owner             User              @relation(fields: [ownerPingId], references: [id], onDelete: Cascade)
+  policies          AssetPolicy[]
+  accessGrants      EmergencyAccessGrant[]
+
+  @@index([ownerPingId])
+  @@index([category])
+}
+
+model Policy {
+  id                 String            @id @default(uuid())
+  ownerPingId        String
+  name               String
+  description        String?
+  targetRelationship String            // e.g. "SPOUSE", "ATTORNEY", "CHILD"
+  eventTrigger       String            // e.g. "MEDICAL_EMERGENCY", "DEATH"
+  maxRiskThreshold   RiskLevel         @default(HIGH)
+  requiresVerifier   Boolean           @default(true)
+  timeDelayHours     Int               @default(0)
+  durationHours      Int               @default(24) // Temporary access validity window
+  isEnabled          Boolean           @default(true)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  owner              User              @relation(fields: [ownerPingId], references: [id], onDelete: Cascade)
+  assets             AssetPolicy[]
+  emergencyRequests  EmergencyRequest[]
+
+  @@index([ownerPingId])
+}
+
+model AssetPolicy {
+  assetId           String
+  policyId          String
+  asset             Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  policy            Policy            @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@id([assetId, policyId])
+}
+
+model EmergencyContact {
+  id                String            @id @default(uuid())
+  ownerPingId       String
+  contactPingId     String?           // Linked after contact registers/verifies in PingDS
+  contactEmail      String
+  contactName       String
+  relationship      String
+  trustLevel        TrustLevel        @default(LEVEL_1_IMMEDIATE)
+  verificationStatus String           // "VERIFIED", "PENDING", "FAILED"
+  createdAt         DateTime          @default(now())
+
+  @@index([ownerPingId])
+  @@index([contactEmail])
+}
+
+model EmergencyRequest {
+  id                String            @id @default(uuid())
+  policyId          String
+  requesterPingId   String
+  ownerPingId       String
+  status            RequestStatus     @default(SUBMITTED)
+  urgencyReason     String
+  evidenceDocument  String?           // URI to uploaded proof in Object Storage
+  verifierPingId    String?           // ID of assigned Verifier authority
+  verifierNotes     String?
+  approvedAt        DateTime?
+  expiresAt         DateTime?         // Automatic revocation timestamp
+  createdAt         DateTime          @default(now())
+
+  policy            Policy            @relation(fields: [policyId], references: [id])
+  requester         User              @relation("Requester", fields: [requesterPingId], references: [id])
+  owner             User              @relation("Owner", fields: [ownerPingId], references: [id])
+  verifier          User?             @relation("Verifier", fields: [verifierPingId], references: [id])
+  accessGrants      EmergencyAccessGrant[]
+
+  @@index([ownerPingId])
+  @@index([requesterPingId])
+  @@index([status])
+}
+
+model EmergencyAccessGrant {
+  id                String            @id @default(uuid())
+  requestId         String
+  assetId           String
+  ephemeralToken    String            @unique // Scoped temporary access token
+  grantedAt         DateTime          @default(now())
+  expiresAt         DateTime
+  isRevoked         Boolean           @default(false)
+
+  request           EmergencyRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  asset             Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id                String            @id @default(uuid())
+  timestamp         DateTime          @default(now())
+  actorPingId       String
+  action            String            // e.g. "AUTH_LOGIN", "EMERGENCY_REQUEST_APPROVED"
+  resource          String
+  ipAddress         String
+  userAgent         String
+  riskScore         Int?
+  pingProduct       String            // e.g. "PingAM", "PingIDM", "PingOne Protect"
+  detailsJson       Json
+
+  @@index([actorPingId])
+  @@index([action])
+  @@index([timestamp])
+}
