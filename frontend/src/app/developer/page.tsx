@@ -79,7 +79,7 @@ export default function DeveloperConsolePage() {
       {/* Top Console Header */}
       <header className="h-14 border-b border-white/5 bg-neutral-950 px-6 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center space-x-4">
-          <Link href="/portal/dashboard" className="flex items-center gap-1 text-neutral-500 hover:text-white transition-colors">
+          <Link href="/dashboard" className="flex items-center gap-1 text-neutral-500 hover:text-white transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" />
             BACK
           </Link>

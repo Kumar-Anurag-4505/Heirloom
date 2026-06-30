@@ -47,7 +47,7 @@ export default function LoginPage() {
         setRiskScore(result.data.riskScore);
       } else {
         // Successful login without MFA
-        router.push('/portal/dashboard');
+        router.push('/dashboard');
       }
     } catch (err) {
       setError('Connection to security gateway failed');
@@ -76,7 +76,7 @@ export default function LoginPage() {
       }
 
       // MFA successfully completed
-      router.push('/portal/dashboard');
+      router.push('/dashboard');
     } catch (err) {
       setError('MFA gateway verification timeout');
     } finally {

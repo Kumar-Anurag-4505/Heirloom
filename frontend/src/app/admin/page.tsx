@@ -72,7 +72,7 @@ export default function AdminConsolePage() {
         {/* Header Navigation */}
         <div className="flex items-center justify-between border-b border-white/5 pb-6">
           <div className="flex items-center space-x-4">
-            <Link href="/portal/dashboard" className="flex items-center gap-1 text-neutral-500 hover:text-white transition-all text-xs font-semibold">
+            <Link href="/dashboard" className="flex items-center gap-1 text-neutral-500 hover:text-white transition-all text-xs font-semibold">
               <ArrowLeft className="w-4 h-4" />
               BACK TO PORTAL
             </Link>

@@ -21,11 +21,11 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const router = useRouter();
 
   const navItems = [
-    { name: 'Dashboard', href: '/portal/dashboard', icon: LayoutDashboard },
-    { name: 'Asset Vault', href: '/portal/assets', icon: Database },
-    { name: 'Emergency Contacts', href: '/portal/contacts', icon: Users },
-    { name: 'Policy Builder', href: '/portal/policies', icon: Sliders },
-    { name: 'Emergency Requests', href: '/portal/requests', icon: ShieldAlert },
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Asset Vault', href: '/assets', icon: Database },
+    { name: 'Emergency Contacts', href: '/contacts', icon: Users },
+    { name: 'Policy Builder', href: '/policies', icon: Sliders },
+    { name: 'Emergency Requests', href: '/requests', icon: ShieldAlert },
   ];
 
   const handleLogout = async () => {

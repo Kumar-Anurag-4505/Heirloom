@@ -209,7 +209,7 @@ export default function RequestTimelinePage() {
             </div>
             
             <button
-              onClick={() => router.push(`/portal/dashboard`)} // Simulates navigating to temp dashboard in M5
+              onClick={() => router.push(`/dashboard`)} // Simulates navigating to temp dashboard in M5
               className="flex items-center justify-center gap-1.5 w-full py-2 bg-green-600 hover:bg-green-500 text-xs font-semibold text-white rounded-lg transition-all"
             >
               Access Temporary Vault
