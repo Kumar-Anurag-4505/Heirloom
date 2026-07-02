@@ -11,6 +11,7 @@ import { policyController } from './controllers/policy.controller';
 import { emergencyController } from './controllers/emergency.controller';
 import { adminController } from './controllers/admin.controller';
 import { dashboardController } from './controllers/dashboard.controller';
+import { trustedConnectionController } from './controllers/trusted-connection.controller';
 import { validateRequest } from './middlewares/validation.middleware';
 import { requireAuth } from './middlewares/auth.middleware';
 import { registerSchema, loginSchema, verifyMfaSchema } from './validators/auth.validator';
@@ -47,17 +48,20 @@ app.get('/api/v1/auth/me', requireAuth, authController.me);
 app.post('/api/v1/assets', requireAuth, validateRequest(createAssetSchema), assetController.create);
 app.get('/api/v1/assets', requireAuth, assetController.list);
 app.get('/api/v1/assets/:id', requireAuth, assetController.get);
+app.put('/api/v1/assets/:id', requireAuth, assetController.update);
 app.delete('/api/v1/assets/:id', requireAuth, assetController.delete);
 
 // Initialize Emergency Contact Routes
 app.post('/api/v1/contacts', requireAuth, contactController.create);
 app.get('/api/v1/contacts', requireAuth, contactController.list);
 app.put('/api/v1/contacts/:id/verify', requireAuth, contactController.verify);
+app.put('/api/v1/contacts/:id', requireAuth, contactController.update);
 app.delete('/api/v1/contacts/:id', requireAuth, contactController.delete);
 
 // Initialize Conditional Policy Routes
 app.post('/api/v1/policies', requireAuth, validateRequest(createPolicySchema), policyController.create);
 app.get('/api/v1/policies', requireAuth, policyController.list);
+app.put('/api/v1/policies/:id', requireAuth, policyController.update);
 app.delete('/api/v1/policies/:id', requireAuth, policyController.delete);
 
 // Initialize Break-Glass Emergency Routes
@@ -69,6 +73,17 @@ app.get('/api/v1/emergency/requests', requireAuth, emergencyController.list);
 app.get('/api/v1/emergency/eligible-policies', requireAuth, emergencyController.getAvailablePolicies);
 app.get('/api/v1/emergency/:id', requireAuth, emergencyController.get);
 app.get('/api/v1/emergency/vault/:token', emergencyController.getVaultByToken); // Token-scoped public access route
+
+// Initialize Trusted Access & Connections Routes
+app.get('/api/v1/trusted-connections/invitations', requireAuth, trustedConnectionController.getInvitations);
+app.post('/api/v1/trusted-connections/invitations/:id/accept', requireAuth, trustedConnectionController.acceptInvitation);
+app.post('/api/v1/trusted-connections/invitations/:id/reject', requireAuth, trustedConnectionController.rejectInvitation);
+app.get('/api/v1/trusted-connections/connections', requireAuth, trustedConnectionController.getConnections);
+app.get('/api/v1/trusted-connections/shared-assets', requireAuth, trustedConnectionController.getSharedAssets);
+app.get('/api/v1/trusted-connections/shared-assets/:id/decrypt', requireAuth, trustedConnectionController.getDecryptedSharedAsset);
+app.get('/api/v1/trusted-connections/history', requireAuth, trustedConnectionController.getHistory);
+app.get('/api/v1/trusted-connections/notifications', requireAuth, trustedConnectionController.getNotifications);
+app.put('/api/v1/trusted-connections/notifications/:id/read', requireAuth, trustedConnectionController.markNotificationRead);
 
 // Initialize Dashboard & Personal Audit Log Routes
 app.get('/api/v1/dashboard/summary', requireAuth, dashboardController.getSummary);

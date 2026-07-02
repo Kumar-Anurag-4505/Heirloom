@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
-  X
+  X,
+  Edit
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '@/lib/api';
@@ -49,6 +50,36 @@ export default function AssetsPage() {
   const [decryptedValue, setDecryptedValue] = useState<string | null>(null);
   const [isDecrypting, setIsDecrypting] = useState(false);
 
+  // Edit / CRUD states
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const resetForm = () => {
+    setEditingAsset(null);
+    setTitle('');
+    setDescription('');
+    setCategory('BANKING');
+    setSensitivityRisk('MEDIUM');
+    setPlaintextPayload('');
+    setError(null);
+  };
+
+  const handleEditClick = (asset: Asset) => {
+    setEditingAsset(asset);
+    setTitle(asset.title);
+    setDescription(asset.description || '');
+    setCategory(asset.category);
+    setSensitivityRisk(asset.sensitivityRisk);
+    setPlaintextPayload(''); // Left empty by default for secure payload updates
+    setError(null);
+    setIsModalOpen(true);
+  };
+
   const fetchAssets = async () => {
     setIsLoading(true);
     try {
@@ -67,33 +98,61 @@ export default function AssetsPage() {
     fetchAssets();
   }, []);
 
-  const handleCreateAsset = async (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!title.trim()) {
+      setError('Asset title is required');
+      return;
+    }
     setIsFormSubmitting(true);
     setError(null);
 
     try {
-      const result = await api.post('/assets', {
-        title,
-        description,
-        category,
-        sensitivityRisk,
-        plaintextPayload
-      });
+      if (editingAsset) {
+        // UPDATE MODE
+        const result = await api.put(`/assets/${editingAsset.id}`, {
+          title,
+          description,
+          category,
+          sensitivityRisk,
+          plaintextPayload: plaintextPayload || undefined
+        });
 
-      if (!result.success) {
-        setError(result.message || 'Failed to protect asset');
-        return;
+        if (!result.success) {
+          setError(result.message || 'Failed to update asset');
+          return;
+        }
+
+        showToast('Asset updated successfully', 'success');
+        await fetchAssets();
+        setIsModalOpen(false);
+        resetForm();
+      } else {
+        // CREATE MODE
+        if (!plaintextPayload) {
+          setError('Secure payload is required when protecting a new asset');
+          setIsFormSubmitting(false);
+          return;
+        }
+
+        const result = await api.post('/assets', {
+          title,
+          description,
+          category,
+          sensitivityRisk,
+          plaintextPayload
+        });
+
+        if (!result.success) {
+          setError(result.message || 'Failed to protect asset');
+          return;
+        }
+
+        showToast('Asset protected successfully', 'success');
+        await fetchAssets();
+        setIsModalOpen(false);
+        resetForm();
       }
-
-      // Refresh list & reset form
-      await fetchAssets();
-      setTitle('');
-      setDescription('');
-      setCategory('BANKING');
-      setSensitivityRisk('MEDIUM');
-      setPlaintextPayload('');
-      setIsModalOpen(false);
     } catch (err: any) {
       setError(err.message || 'Communication with key orchestration server timed out');
     } finally {
@@ -126,10 +185,12 @@ export default function AssetsPage() {
     if (!confirm('Are you sure you want to permanently delete this protected asset?')) return;
     try {
       await api.delete(`/assets/${assetId}`);
+      showToast('Asset archived successfully', 'success');
       setInspectingAsset(null);
       await fetchAssets();
     } catch (err) {
       setError('Failed to archive asset');
+      showToast('Failed to archive asset', 'error');
     }
   };
 
@@ -142,7 +203,10 @@ export default function AssetsPage() {
           <p className="text-xs text-neutral-400">Cryptographically protect, categorize, and govern your digital credentials.</p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            resetForm();
+            setIsModalOpen(true);
+          }}
           className="glow-button flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-lg shadow-blue-500/20 transition-all border border-blue-400/20"
         >
           <Plus className="w-4 h-4" />
@@ -164,7 +228,10 @@ export default function AssetsPage() {
             <p className="text-xs text-neutral-400 mt-1">Get started by creating your first cryptographically locked legacy token.</p>
           </div>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              resetForm();
+              setIsModalOpen(true);
+            }}
             className="px-4 py-2 border border-white/10 hover:border-white/20 text-xs font-semibold text-neutral-300 hover:text-white rounded-lg transition-all"
           >
             Create Asset
@@ -183,7 +250,17 @@ export default function AssetsPage() {
                   <span className="text-[10px] font-bold bg-blue-950/40 text-blue-400 px-2 py-0.5 rounded border border-blue-500/10 tracking-wider">
                     {asset.category}
                   </span>
-                  <div className="flex items-center space-x-1 text-[10px] text-neutral-500">
+                  <div className="flex items-center space-x-2 text-[10px] text-neutral-500">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditClick(asset);
+                      }}
+                      className="p-1 rounded text-neutral-500 hover:text-white hover:bg-white/10 transition-all"
+                      title="Edit Asset"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
                     <Lock className="w-3 h-3" />
                     <span>AES-256</span>
                   </div>
@@ -222,11 +299,21 @@ export default function AssetsPage() {
               </button>
 
               <div className="mb-6">
-                <h2 className="text-lg font-bold text-white tracking-tight">Protect Legacy Asset</h2>
-                <p className="text-xs text-neutral-400">Specify details. Secret payloads are encrypted prior to directory sync.</p>
+                <h2 className="text-lg font-bold text-white tracking-tight">
+                  {editingAsset ? 'Edit Legacy Asset' : 'Protect Legacy Asset'}
+                </h2>
+                <p className="text-xs text-neutral-400">
+                  {editingAsset ? 'Modify details. Updated secrets will be re-encrypted prior to database sync.' : 'Specify details. Secret payloads are encrypted prior to directory sync.'}
+                </p>
               </div>
 
-              <form onSubmit={handleCreateAsset} className="space-y-4">
+              {error && (
+                <div className="mb-4 p-3 bg-red-950/20 border border-red-500/20 text-red-400 text-xs rounded-lg">
+                  {error}
+                </div>
+              )}
+
+              <form onSubmit={handleFormSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-neutral-400 mb-2">Category</label>
@@ -298,7 +385,11 @@ export default function AssetsPage() {
                   disabled={isFormSubmitting}
                   className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-xs font-semibold text-white rounded-lg flex items-center justify-center gap-2 transition-all"
                 >
-                  {isFormSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Encrypt & Protect Asset'}
+                  {isFormSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    editingAsset ? 'Save Updates' : 'Protect Asset'
+                  )}
                 </button>
               </form>
             </motion.div>
@@ -382,8 +473,18 @@ export default function AssetsPage() {
 
               <div className="border-t border-white/5 pt-6 flex gap-4">
                 <button
+                  onClick={() => {
+                    setInspectingAsset(null);
+                    handleEditClick(inspectingAsset);
+                  }}
+                  className="w-1/2 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-blue-500/20 bg-blue-950/10 hover:bg-blue-950/30 text-blue-400 text-xs font-semibold transition-all"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit Asset
+                </button>
+                <button
                   onClick={() => handleDeleteAsset(inspectingAsset.id)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-red-500/20 bg-red-950/10 hover:bg-red-950/30 text-red-400 text-xs font-semibold transition-all"
+                  className="w-1/2 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-red-500/20 bg-red-950/10 hover:bg-red-950/30 text-red-400 text-xs font-semibold transition-all"
                 >
                   <Trash2 className="w-4 h-4" />
                   Archive Asset
@@ -391,6 +492,24 @@ export default function AssetsPage() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Slide-in toast notification portal */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-xl text-xs font-semibold border ${
+              toast.type === 'success' 
+                ? 'bg-emerald-950/80 border-emerald-500/20 text-emerald-400' 
+                : 'bg-red-950/80 border-red-500/20 text-red-400'
+            }`}
+          >
+            {toast.message}
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

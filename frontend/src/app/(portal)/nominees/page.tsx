@@ -7,10 +7,7 @@ import {
   Loader2, 
   Trash2, 
   UserCheck, 
-  Smartphone, 
   Mail, 
-  CheckCircle2, 
-  AlertCircle, 
   X,
   Edit
 } from 'lucide-react';
@@ -27,7 +24,7 @@ interface Contact {
   contactPingId?: string;
 }
 
-export default function ContactsPage() {
+export default function NomineesPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -35,7 +32,6 @@ export default function ContactsPage() {
   // Form Fields
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
-  const [relationship, setRelationship] = useState('SPOUSE');
   const [trustLevel, setTrustLevel] = useState('LEVEL_1_IMMEDIATE');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +49,6 @@ export default function ContactsPage() {
     setEditingContact(null);
     setContactName('');
     setContactEmail('');
-    setRelationship('SPOUSE');
     setTrustLevel('LEVEL_1_IMMEDIATE');
     setError(null);
   };
@@ -62,7 +57,6 @@ export default function ContactsPage() {
     setEditingContact(contact);
     setContactName(contact.contactName);
     setContactEmail(contact.contactEmail);
-    setRelationship(contact.relationship);
     setTrustLevel(contact.trustLevel);
     setError(null);
     setIsModalOpen(true);
@@ -73,10 +67,12 @@ export default function ContactsPage() {
     try {
       const result = await api.get('/contacts');
       if (result.success) {
-        setContacts(result.data);
+        // Filter nominee relationships
+        const nominees = result.data.filter((c: Contact) => c.relationship === 'FINANCIAL_NOMINEE');
+        setContacts(nominees);
       }
     } catch (err) {
-      setError('Failed to fetch emergency contact directory');
+      setError('Failed to fetch financial nominee directory');
     } finally {
       setIsLoading(false);
     }
@@ -89,7 +85,7 @@ export default function ContactsPage() {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactName.trim() || !contactEmail.trim()) {
-      setError('Contact name and email are required');
+      setError('Nominee name and email are required');
       return;
     }
     setIsSubmitting(true);
@@ -101,17 +97,17 @@ export default function ContactsPage() {
         const result = await api.put(`/contacts/${editingContact.id}`, {
           contactName,
           contactEmail,
-          relationship,
+          relationship: 'FINANCIAL_NOMINEE',
           trustLevel,
           verificationStatus: editingContact.verificationStatus
         });
 
         if (!result.success) {
-          setError(result.message || 'Failed to update contact');
+          setError(result.message || 'Failed to update nominee');
           return;
         }
 
-        showToast('Emergency contact updated successfully', 'success');
+        showToast('Nominee connection updated successfully', 'success');
         await fetchContacts();
         setIsModalOpen(false);
         resetForm();
@@ -120,16 +116,16 @@ export default function ContactsPage() {
         const result = await api.post('/contacts', {
           contactName,
           contactEmail,
-          relationship,
+          relationship: 'FINANCIAL_NOMINEE',
           trustLevel
         });
 
         if (!result.success) {
-          setError(result.message || 'Failed to register contact');
+          setError(result.message || 'Failed to register nominee');
           return;
         }
 
-        showToast('Invitation verification dispatched successfully', 'success');
+        showToast('Nominee verification invitation sent', 'success');
         await fetchContacts();
         setIsModalOpen(false);
         resetForm();
@@ -145,7 +141,7 @@ export default function ContactsPage() {
     try {
       const result = await api.put(`/contacts/${contactId}/verify`);
       if (result.success) {
-        showToast('LDAP sync simulated successfully', 'success');
+        showToast('LDAP sync completed successfully', 'success');
         await fetchContacts();
       }
     } catch (err) {
@@ -155,14 +151,14 @@ export default function ContactsPage() {
   };
 
   const handleDelete = async (contactId: string) => {
-    if (!confirm('Are you sure you want to remove this emergency contact?')) return;
+    if (!confirm('Are you sure you want to remove this financial nominee connection?')) return;
     try {
       await api.delete(`/contacts/${contactId}`);
-      showToast('Contact removed successfully', 'success');
+      showToast('Nominee removed successfully', 'success');
       await fetchContacts();
     } catch (err) {
-      setError('Failed to delete contact record');
-      showToast('Failed to delete contact record', 'error');
+      setError('Failed to delete nominee record');
+      showToast('Failed to delete nominee record', 'error');
     }
   };
 
@@ -171,8 +167,8 @@ export default function ContactsPage() {
       {/* Title Bar */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Emergency Contacts & Nominees</h1>
-          <p className="text-xs text-neutral-400">Establish trusted relationship records to delegate time-scoped emergency permissions.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Financial Nominees</h1>
+          <p className="text-xs text-neutral-400">Designate legal nominees for time-delayed bank and investment trust transfers.</p>
         </div>
         <button
           onClick={() => {
@@ -182,7 +178,7 @@ export default function ContactsPage() {
           className="glow-button flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-lg shadow-blue-500/20 transition-all border border-blue-400/20"
         >
           <Plus className="w-4 h-4" />
-          Add Trusted Contact
+          Add Financial Nominee
         </button>
       </div>
 
@@ -190,14 +186,14 @@ export default function ContactsPage() {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-24 text-neutral-500 space-y-3">
           <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-          <span className="text-xs font-mono">Loading Trust Relationship Tree...</span>
+          <span className="text-xs font-mono">Loading Nominee Registries...</span>
         </div>
       ) : contacts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 rounded-xl border border-dashed border-white/10 text-neutral-500 space-y-4">
           <Users className="w-10 h-10 text-neutral-600" />
           <div className="text-center">
-            <p className="text-sm font-semibold text-white">No Trusted Relationships Found</p>
-            <p className="text-xs text-neutral-400 mt-1">Add your spouse, siblings, or attorney to configure visual conditional access rules.</p>
+            <p className="text-sm font-semibold text-white">No Financial Nominees Registered</p>
+            <p className="text-xs text-neutral-400 mt-1">Specify legal nominees to establish secure directory transfers for inheritance assets.</p>
           </div>
           <button
             onClick={() => {
@@ -206,7 +202,7 @@ export default function ContactsPage() {
             }}
             className="px-4 py-2 border border-white/10 hover:border-white/20 text-xs font-semibold text-neutral-300 hover:text-white rounded-lg transition-all"
           >
-            Add Contact
+            Add Nominee
           </button>
         </div>
       ) : (
@@ -243,7 +239,7 @@ export default function ContactsPage() {
                 <div className="grid grid-cols-2 gap-4 text-xs border-t border-white/5 pt-4">
                   <div>
                     <p className="text-neutral-500 text-[10px]">Relationship Scope</p>
-                    <p className="text-white font-medium mt-0.5">{contact.relationship}</p>
+                    <p className="text-white font-medium mt-0.5">FINANCIAL NOMINEE</p>
                   </div>
                   <div>
                     <p className="text-neutral-500 text-[10px]">Access Trust Level</p>
@@ -263,7 +259,7 @@ export default function ContactsPage() {
                   <button
                     onClick={() => handleEditClick(contact)}
                     className="p-2 rounded-lg border border-white/5 text-neutral-500 hover:text-blue-400 hover:border-blue-500/20 transition-all hover:bg-blue-950/10"
-                    title="Edit Contact"
+                    title="Edit Nominee"
                   >
                     <Edit className="w-3.5 h-3.5" />
                   </button>
@@ -289,7 +285,7 @@ export default function ContactsPage() {
         </div>
       )}
 
-      {/* Add Contact Modal */}
+      {/* Add Nominee Modal */}
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -308,10 +304,10 @@ export default function ContactsPage() {
 
               <div className="mb-6">
                 <h2 className="text-lg font-bold text-white tracking-tight">
-                  {editingContact ? 'Edit Trusted Contact' : 'Register Trusted Contact'}
+                  {editingContact ? 'Edit Nominee Connection' : 'Register Financial Nominee'}
                 </h2>
                 <p className="text-xs text-neutral-400">
-                  {editingContact ? 'Update relationship profile for active OIDC legacy verification rules.' : 'Invites are linked directly inside directory services.'}
+                  {editingContact ? 'Modify relationship parameters and sync options.' : 'Invites are mapped to directory user identities.'}
                 </p>
               </div>
 
@@ -323,56 +319,39 @@ export default function ContactsPage() {
 
               <form onSubmit={handleFormSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-400 mb-2">Full Name</label>
+                  <label className="block text-xs font-semibold text-neutral-400 mb-2">Nominee Full Name</label>
                   <input
                     type="text"
                     value={contactName}
                     onChange={(e) => setContactName(e.target.value)}
-                    placeholder="e.g. Priya Sharma"
+                    placeholder="e.g. Sarah Connor"
                     required
-                    className="w-full px-3 py-2.5 bg-neutral-900 border border-white/10 focus:border-blue-500 rounded-lg text-xs text-white placeholder-neutral-500 outline-none transition-all"
+                    className="w-full px-3 py-2.5 bg-neutral-900 border border-white/10 focus:border-blue-500 rounded-lg text-xs text-white outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-400 mb-2">Email Address</label>
+                  <label className="block text-xs font-semibold text-neutral-400 mb-2">Nominee Email Address</label>
                   <input
                     type="email"
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
-                    placeholder="e.g. priya@heirloom.io"
+                    placeholder="e.g. sarah@cyberdyne.com"
                     required
-                    className="w-full px-3 py-2.5 bg-neutral-900 border border-white/10 focus:border-blue-500 rounded-lg text-xs text-white placeholder-neutral-500 outline-none transition-all"
+                    className="w-full px-3 py-2.5 bg-neutral-900 border border-white/10 focus:border-blue-500 rounded-lg text-xs text-white outline-none"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-400 mb-2">Relationship</label>
-                    <select
-                      value={relationship}
-                      onChange={(e) => setRelationship(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-900 border border-white/10 focus:border-blue-500 rounded-lg text-xs text-white outline-none"
-                    >
-                      <option value="SPOUSE">Spouse</option>
-                      <option value="SIBLING">Sibling</option>
-                      <option value="CHILD">Child</option>
-                      <option value="ATTORNEY">Attorney / Counsel</option>
-                      <option value="PHYSICIAN">Physician / Verifier</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-400 mb-2">Trust Level</label>
-                    <select
-                      value={trustLevel}
-                      onChange={(e) => setTrustLevel(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-900 border border-white/10 focus:border-blue-500 rounded-lg text-xs text-white outline-none"
-                    >
-                      <option value="LEVEL_1_IMMEDIATE">Immediate Unlock</option>
-                      <option value="LEVEL_2_DELAYED">Delayed Lockout Check</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-400 mb-2">Access Trust Level</label>
+                  <select
+                    value={trustLevel}
+                    onChange={(e) => setTrustLevel(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-neutral-900 border border-white/10 focus:border-blue-500 rounded-lg text-xs text-white outline-none"
+                  >
+                    <option value="LEVEL_1_IMMEDIATE">Immediate Access Grant</option>
+                    <option value="LEVEL_2_DELAYED">Delayed Lockout Verification Check</option>
+                  </select>
                 </div>
 
                 <button
@@ -383,7 +362,7 @@ export default function ContactsPage() {
                   {isSubmitting ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    editingContact ? 'Save Updates' : 'Send Directory Invite'
+                    editingContact ? 'Save Updates' : 'Send Invite'
                   )}
                 </button>
               </form>

@@ -1,22 +1,22 @@
-# Implementation Tasks - Dynamic Dashboard and Centralized Auth
+# Implementation Tasks - Trusted Access
 
-- [x] Backend Refactoring
-  - [x] Implement `GET /api/v1/dashboard/summary` endpoint
-  - [x] Implement `GET /api/v1/audit/me` endpoint
-  - [x] Register new endpoints in `server.ts` behind `requireAuth`
-- [x] Frontend Architectural Core
-  - [x] Implement central API client helper (`src/lib/api.ts`) attaching JWT tokens automatically
-  - [x] Update `AuthContext.tsx` to handle profile session states and link with the API client
-- [x] Frontend Pages Refactoring
-  - [x] Update `(portal)/layout.tsx` to display active user dynamic avatar and email
-  - [x] Update `(portal)/dashboard/page.tsx` to fetch stats and logs from the new backend endpoints
-  - [x] Update `(portal)/assets/page.tsx` to use the central API client
-  - [x] Update `(portal)/contacts/page.tsx` to use the central API client
-  - [x] Update `(portal)/policies/page.tsx` to use the central API client
-  - [x] Update `(portal)/requests/page.tsx` to use the central API client
-  - [x] Update `admin/page.tsx` to use the central API client
-  - [x] Update `emergency/page.tsx` to use the central API client
-  - [x] Update `emergency/request/[id]/page.tsx` to use the central API client
-- [x] Verification and Deployment
-  - [x] Rebuild and run Docker containers
-  - [x] Manually register "Kumar Anurag", login, and verify correct dynamic dashboard metrics rendering
+- [x] Database Schema Update
+  - [x] Add `Notification` model and `notifications` relation on `User` in `backend/prisma/schema.prisma`
+  - [x] Push schema updates to database using Prisma CLI
+- [x] Backend API Implementation
+  - [x] Create `trusted-connection.controller.ts` with invitations, connections, shared assets, notifications, and history endpoints
+  - [x] Update `dashboard.controller.ts` to include shared/trusted KPIs
+  - [x] Update `emergency.controller.ts` to enforce trusted contact validation
+  - [x] Register new routes in `server.ts`
+- [x] Frontend Views Implementation
+  - [x] Update sidebar navigation in `layout.tsx` (MY SPACE / TRUSTED ACCESS)
+  - [x] Implement `shared-assets` page (grouped by owner, decryption click)
+  - [x] Implement `my-requests` page (Pending, Approved, Rejected, Expired grouping)
+  - [x] Implement `trusted-connections` page (accept/reject invitations, list active)
+  - [x] Implement `access-history` page (audit logs logs and claims)
+  - [x] Implement `nominees` page (filtered nominee lists)
+  - [x] Add Notification bell header widget and popover dropdown feed
+  - [x] Update main Dashboard page with consolidated trusted statistics
+- [x] Verification
+  - [x] Compile and build backend and frontend projects
+  - [x] Verify functionality via comprehensive user flow verification

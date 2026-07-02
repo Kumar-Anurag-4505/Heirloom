@@ -26,6 +26,10 @@ interface DashboardSummary {
     medium: number;
     low: number;
   };
+  sharedAssetsCount: number;
+  pendingRequestsSubmittedCount: number;
+  requestsAwaitingMyApprovalCount: number;
+  trustedConnectionsCount: number;
 }
 
 interface AuditLog {
@@ -147,6 +151,41 @@ export default function DashboardPage() {
           <div>
             <h2 className="text-2xl font-bold text-white mb-1">{summary.securityScore} / 100</h2>
             <p className="text-[10px] text-green-400">Risk Assessment: Low Risk</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Trusted Access Section */}
+      <div className="space-y-4">
+        <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Trusted Access Status</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="p-5 rounded-xl border border-white/5 bg-neutral-950/30 glass-panel flex flex-col justify-between">
+            <span className="text-[10px] font-bold text-neutral-500 uppercase">Shared Assets</span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-xl font-bold text-white">{summary.sharedAssetsCount}</span>
+              <span className="text-[9px] text-blue-400 font-semibold">Active Grants</span>
+            </div>
+          </div>
+          <div className="p-5 rounded-xl border border-white/5 bg-neutral-950/30 glass-panel flex flex-col justify-between">
+            <span className="text-[10px] font-bold text-neutral-500 uppercase">My Access Claims</span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-xl font-bold text-white">{summary.pendingRequestsSubmittedCount}</span>
+              <span className="text-[9px] text-yellow-400 font-semibold">Pending</span>
+            </div>
+          </div>
+          <div className="p-5 rounded-xl border border-white/5 bg-neutral-950/30 glass-panel flex flex-col justify-between">
+            <span className="text-[10px] font-bold text-neutral-500 uppercase">Claims For My Assets</span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-xl font-bold text-white">{summary.requestsAwaitingMyApprovalCount}</span>
+              <span className="text-[9px] text-red-400 font-semibold">Requires Action</span>
+            </div>
+          </div>
+          <div className="p-5 rounded-xl border border-white/5 bg-neutral-950/30 glass-panel flex flex-col justify-between">
+            <span className="text-[10px] font-bold text-neutral-500 uppercase">Trusted Connections</span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="text-xl font-bold text-white">{summary.trustedConnectionsCount}</span>
+              <span className="text-[9px] text-emerald-400 font-semibold">Active Profiles</span>
+            </div>
           </div>
         </div>
       </div>

@@ -13,7 +13,8 @@ import {
   Lock,
   ArrowRight,
   Database,
-  X
+  X,
+  Edit
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '@/lib/api';
@@ -27,6 +28,7 @@ interface Asset {
 interface Policy {
   id: string;
   name: string;
+  description?: string;
   targetRelationship: string;
   eventTrigger: string;
   maxRiskThreshold: string;
@@ -55,6 +57,44 @@ export default function PoliciesPage() {
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Edit / CRUD states
+  const [editingPolicy, setEditingPolicy] = useState<Policy | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const resetForm = () => {
+    setEditingPolicy(null);
+    setName('');
+    setDescription('');
+    setTargetRelationship('SPOUSE');
+    setEventTrigger('MEDICAL_EMERGENCY');
+    setMaxRiskThreshold('HIGH');
+    setRequiresVerifier(true);
+    setTimeDelayHours(0);
+    setDurationHours(24);
+    setSelectedAssetIds([]);
+    setError(null);
+  };
+
+  const handleEditClick = (policy: Policy) => {
+    setEditingPolicy(policy);
+    setName(policy.name);
+    setDescription(policy.description || '');
+    setTargetRelationship(policy.targetRelationship);
+    setEventTrigger(policy.eventTrigger);
+    setMaxRiskThreshold(policy.maxRiskThreshold);
+    setRequiresVerifier(policy.requiresVerifier);
+    setTimeDelayHours(policy.timeDelayHours);
+    setDurationHours(policy.durationHours);
+    setSelectedAssetIds(policy.assets.map(a => a.asset.id));
+    setError(null);
+    setIsModalOpen(true);
+  };
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -85,8 +125,12 @@ export default function PoliciesPage() {
     );
   };
 
-  const handleCreatePolicy = async (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name.trim()) {
+      setError('Policy name is required');
+      return;
+    }
     if (selectedAssetIds.length === 0) {
       setError('Please bind at least one vault asset to this access rule');
       return;
@@ -95,34 +139,53 @@ export default function PoliciesPage() {
     setError(null);
 
     try {
-      const result = await api.post('/policies', {
-        name,
-        description,
-        targetRelationship,
-        eventTrigger,
-        maxRiskThreshold,
-        requiresVerifier,
-        timeDelayHours: Number(timeDelayHours),
-        durationHours: Number(durationHours),
-        assetIds: selectedAssetIds
-      });
+      if (editingPolicy) {
+        // UPDATE MODE
+        const result = await api.put(`/policies/${editingPolicy.id}`, {
+          name,
+          description,
+          targetRelationship,
+          eventTrigger,
+          maxRiskThreshold,
+          requiresVerifier,
+          timeDelayHours: Number(timeDelayHours),
+          durationHours: Number(durationHours),
+          assetIds: selectedAssetIds
+        });
 
-      if (!result.success) {
-        setError(result.message || 'Failed to compile visual policy');
-        return;
+        if (!result.success) {
+          setError(result.message || 'Failed to update access policy');
+          return;
+        }
+
+        showToast('Access policy updated successfully', 'success');
+        await fetchData();
+        setIsModalOpen(false);
+        resetForm();
+      } else {
+        // CREATE MODE
+        const result = await api.post('/policies', {
+          name,
+          description,
+          targetRelationship,
+          eventTrigger,
+          maxRiskThreshold,
+          requiresVerifier,
+          timeDelayHours: Number(timeDelayHours),
+          durationHours: Number(durationHours),
+          assetIds: selectedAssetIds
+        });
+
+        if (!result.success) {
+          setError(result.message || 'Failed to compile visual policy');
+          return;
+        }
+
+        showToast('Access policy created successfully', 'success');
+        await fetchData();
+        setIsModalOpen(false);
+        resetForm();
       }
-
-      await fetchData();
-      setName('');
-      setDescription('');
-      setTargetRelationship('SPOUSE');
-      setEventTrigger('MEDICAL_EMERGENCY');
-      setMaxRiskThreshold('HIGH');
-      setRequiresVerifier(true);
-      setTimeDelayHours(0);
-      setDurationHours(24);
-      setSelectedAssetIds([]);
-      setIsModalOpen(false);
     } catch (err: any) {
       setError(err.message || 'Policy engine compilation dispatch failed');
     } finally {
@@ -134,9 +197,11 @@ export default function PoliciesPage() {
     if (!confirm('Are you sure you want to permanently delete this access policy?')) return;
     try {
       await api.delete(`/policies/${policyId}`);
+      showToast('Access policy revoked successfully', 'success');
       await fetchData();
     } catch (err) {
       setError('Failed to revoke policy');
+      showToast('Failed to revoke policy', 'error');
     }
   };
 
@@ -149,7 +214,10 @@ export default function PoliciesPage() {
           <p className="text-xs text-neutral-400">Visually compile conditional access policies. Evaluated dynamically post step-up verification.</p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            resetForm();
+            setIsModalOpen(true);
+          }}
           className="glow-button flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-lg shadow-blue-500/20 transition-all border border-blue-400/20"
         >
           <Plus className="w-4 h-4" />
@@ -171,7 +239,10 @@ export default function PoliciesPage() {
             <p className="text-xs text-neutral-400 mt-1">Configure conditional rules outlining who receives break-glass access under what event conditions.</p>
           </div>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              resetForm();
+              setIsModalOpen(true);
+            }}
             className="px-4 py-2 border border-white/10 hover:border-white/20 text-xs font-semibold text-neutral-300 hover:text-white rounded-lg transition-all"
           >
             Create Policy
@@ -193,12 +264,22 @@ export default function PoliciesPage() {
                   </h3>
                   <p className="text-[10px] text-neutral-500 mt-1 font-mono">ID: {policy.id}</p>
                 </div>
-                <button
-                  onClick={() => handleDeletePolicy(policy.id)}
-                  className="p-1.5 rounded-lg border border-white/5 text-neutral-500 hover:text-red-400 hover:border-red-500/20 transition-all hover:bg-red-950/10"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleEditClick(policy)}
+                    className="p-1.5 rounded-lg border border-white/5 text-neutral-500 hover:text-blue-400 hover:border-blue-500/20 transition-all hover:bg-blue-950/10"
+                    title="Edit Policy"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeletePolicy(policy.id)}
+                    className="p-1.5 rounded-lg border border-white/5 text-neutral-500 hover:text-red-400 hover:border-red-500/20 transition-all hover:bg-red-950/10"
+                    title="Delete Policy"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Rules Evaluation Display */}
@@ -243,7 +324,7 @@ export default function PoliciesPage() {
         </div>
       )}
 
-      {/* Create Visual Policy Modal */}
+      {/* Create/Edit Visual Policy Modal */}
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -261,20 +342,21 @@ export default function PoliciesPage() {
               </button>
 
               <div className="mb-6">
-                <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                  <Sliders className="w-5 h-5 text-blue-500" />
-                  Compile Conditional Access Policy
+                <h2 className="text-lg font-bold text-white tracking-tight">
+                  {editingPolicy ? 'Edit Access Policy' : 'Create Visual Policy'}
                 </h2>
-                <p className="text-xs text-neutral-400">Azure Conditional Access blocks compiled directly into decision mappings.</p>
+                <p className="text-xs text-neutral-400">
+                  {editingPolicy ? 'Modify conditional visual blocks for legacy verification triggers.' : 'Visually compile conditional access policies. Evaluated dynamically post step-up verification.'}
+                </p>
               </div>
 
               {error && (
-                <div className="p-3 mb-4 rounded-lg bg-red-950/20 border border-red-500/30 text-red-400 text-xs">
+                <div className="mb-4 p-3 bg-red-950/20 border border-red-500/20 text-red-400 text-xs rounded-lg">
                   {error}
                 </div>
               )}
 
-              <form onSubmit={handleCreatePolicy} className="space-y-6">
+              <form onSubmit={handleFormSubmit} className="space-y-6">
                 {/* Policy Identification */}
                 <div className="space-y-4">
                   <div>
@@ -286,6 +368,15 @@ export default function PoliciesPage() {
                       placeholder="e.g. Spouse Break-Glass Medical Scope"
                       required
                       className="w-full px-3 py-2 bg-neutral-900 border border-white/10 focus:border-blue-500 rounded-lg text-xs text-white placeholder-neutral-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-400 mb-2">Description</label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="e.g. Allows immediate access to banking vault credentials in the event of documented emergency check verification."
+                      className="w-full h-16 px-3 py-2 bg-neutral-900 border border-white/10 focus:border-blue-500 rounded-lg text-xs text-white placeholder-neutral-500 outline-none resize-none"
                     />
                   </div>
                 </div>
@@ -410,14 +501,36 @@ export default function PoliciesPage() {
 
                 <button
                   type="submit"
-                  disabled={isSubmitting || selectedAssetIds.length === 0}
+                  disabled={isSubmitting}
                   className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-xs font-semibold text-white rounded-lg flex items-center justify-center gap-2 transition-all"
                 >
-                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Compile Visual Policy Matrix'}
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    editingPolicy ? 'Save Updates' : 'Compile Policy Engine'
+                  )}
                 </button>
               </form>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Slide-in toast notification portal */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-xl text-xs font-semibold border ${
+              toast.type === 'success' 
+                ? 'bg-emerald-950/80 border-emerald-500/20 text-emerald-400' 
+                : 'bg-red-950/80 border-red-500/20 text-red-400'
+            }`}
+          >
+            {toast.message}
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

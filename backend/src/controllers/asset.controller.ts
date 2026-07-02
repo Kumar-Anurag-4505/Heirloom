@@ -134,5 +134,58 @@ export class AssetController {
       next(error);
     }
   };
+
+  public update = async (req: UserRequest, res: Response, next: NextFunction): Promise<void> => {
+    const requestId = crypto.randomUUID();
+    try {
+      const ownerPingId = req.user?.sub;
+      if (!ownerPingId) {
+        res.status(401).json({
+          success: false,
+          message: 'User session not found',
+          data: null,
+          timestamp: new Date().toISOString(),
+          requestId
+        });
+        return;
+      }
+
+      const { id } = req.params;
+      const { title, description, category, sensitivityRisk, plaintextPayload } = req.body;
+
+      if (!title) {
+        res.status(400).json({
+          success: false,
+          message: 'Asset title is required',
+          data: null,
+          timestamp: new Date().toISOString(),
+          requestId
+        });
+        return;
+      }
+
+      const asset = await assetService.updateAsset({
+        assetId: id,
+        ownerPingId,
+        title,
+        description,
+        category,
+        sensitivityRisk,
+        plaintextPayload,
+        ipAddress: req.ip || '127.0.0.1',
+        userAgent: req.headers['user-agent'] || 'Unknown'
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Asset updated successfully',
+        data: asset,
+        timestamp: new Date().toISOString(),
+        requestId
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 export const assetController = new AssetController();

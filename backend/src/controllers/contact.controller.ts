@@ -219,5 +219,91 @@ export class ContactController {
       next(error);
     }
   };
+
+  public update = async (req: UserRequest, res: Response, next: NextFunction): Promise<void> => {
+    const requestId = crypto.randomUUID();
+    try {
+      const ownerPingId = req.user?.sub;
+      if (!ownerPingId) {
+        res.status(401).json({
+          success: false,
+          message: 'User session not found',
+          data: null,
+          timestamp: new Date().toISOString(),
+          requestId
+        });
+        return;
+      }
+
+      const { id } = req.params;
+      const { contactEmail, contactName, relationship, trustLevel, verificationStatus } = req.body;
+
+      if (!contactEmail || !contactName) {
+        res.status(400).json({
+          success: false,
+          message: 'Contact name and email are required',
+          data: null,
+          timestamp: new Date().toISOString(),
+          requestId
+        });
+        return;
+      }
+
+      const contact = await prisma.emergencyContact.findFirst({
+        where: { id, ownerPingId }
+      });
+
+      if (!contact) {
+        res.status(404).json({
+          success: false,
+          message: 'Contact record not found',
+          data: null,
+          timestamp: new Date().toISOString(),
+          requestId
+        });
+        return;
+      }
+
+      const mappedTrustLevel = trustLevel as TrustLevel || contact.trustLevel;
+
+      const updatedContact = await prisma.emergencyContact.update({
+        where: { id },
+        data: {
+          contactEmail,
+          contactName,
+          relationship,
+          trustLevel: mappedTrustLevel,
+          verificationStatus: verificationStatus || contact.verificationStatus
+        }
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          actorPingId: ownerPingId,
+          action: 'CONTACT_UPDATED',
+          resource: `Contact:${updatedContact.id}`,
+          ipAddress: req.ip || '127.0.0.1',
+          userAgent: req.headers['user-agent'] || 'Unknown',
+          pingProduct: 'PingDS',
+          detailsJson: {
+            contactEmail,
+            contactName,
+            relationship,
+            trustLevel
+          }
+        }
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Contact updated successfully',
+        data: updatedContact,
+        timestamp: new Date().toISOString(),
+        requestId
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 export const contactController = new ContactController();

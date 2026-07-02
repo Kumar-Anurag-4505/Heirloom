@@ -11,6 +11,7 @@ import {
   DirectorySyncResult 
 } from './ping-provider.interface';
 import { telemetry } from '../utils/telemetry';
+import { prisma } from '../config/db';
 import * as crypto from 'crypto';
 
 export class PingMockAdapter implements IPingIdentityProvider {
@@ -45,6 +46,25 @@ export class PingMockAdapter implements IPingIdentityProvider {
         foundId = id;
         foundProfile = profile;
         break;
+      }
+    }
+
+    if (!foundId || !foundProfile) {
+      try {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: credentials.email }
+        });
+        if (dbUser) {
+          foundId = dbUser.id;
+          foundProfile = {
+            email: dbUser.email,
+            name: dbUser.name,
+            roles: ['OWNER']
+          };
+          this.mockDirectory.set(foundId, foundProfile);
+        }
+      } catch (err) {
+        // Fallback
       }
     }
 

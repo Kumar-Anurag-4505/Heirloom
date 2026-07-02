@@ -198,5 +198,133 @@ export class PolicyController {
       next(error);
     }
   };
+
+  public update = async (req: UserRequest, res: Response, next: NextFunction): Promise<void> => {
+    const requestId = crypto.randomUUID();
+    try {
+      const ownerPingId = req.user?.sub;
+      if (!ownerPingId) {
+        res.status(401).json({
+          success: false,
+          message: 'User session not found',
+          data: null,
+          timestamp: new Date().toISOString(),
+          requestId
+        });
+        return;
+      }
+
+      const { id } = req.params;
+      const { 
+        name, 
+        description, 
+        targetRelationship, 
+        eventTrigger, 
+        maxRiskThreshold, 
+        requiresVerifier, 
+        timeDelayHours, 
+        durationHours,
+        assetIds 
+      } = req.body;
+
+      if (!name) {
+        res.status(400).json({
+          success: false,
+          message: 'Policy name is required',
+          data: null,
+          timestamp: new Date().toISOString(),
+          requestId
+        });
+        return;
+      }
+
+      const existingPolicy = await prisma.policy.findFirst({
+        where: { id, ownerPingId }
+      });
+
+      if (!existingPolicy) {
+        res.status(404).json({
+          success: false,
+          message: 'Access policy not found',
+          data: null,
+          timestamp: new Date().toISOString(),
+          requestId
+        });
+        return;
+      }
+
+      const updatedPolicy = await prisma.$transaction(async (tx) => {
+        const p = await tx.policy.update({
+          where: { id },
+          data: {
+            name,
+            description,
+            targetRelationship,
+            eventTrigger,
+            maxRiskThreshold: maxRiskThreshold as RiskLevel || existingPolicy.maxRiskThreshold,
+            requiresVerifier: requiresVerifier !== undefined ? !!requiresVerifier : existingPolicy.requiresVerifier,
+            timeDelayHours: timeDelayHours !== undefined ? Number(timeDelayHours) : existingPolicy.timeDelayHours,
+            durationHours: durationHours !== undefined ? Number(durationHours) : existingPolicy.durationHours
+          }
+        });
+
+        if (assetIds && Array.isArray(assetIds)) {
+          await tx.assetPolicy.deleteMany({
+            where: { policyId: id }
+          });
+
+          const bindings = assetIds.map((assetId: string) => ({
+            assetId,
+            policyId: id
+          }));
+
+          await tx.assetPolicy.createMany({
+            data: bindings
+          });
+        }
+
+        return p;
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          actorPingId: ownerPingId,
+          action: 'POLICY_UPDATED',
+          resource: `Policy:${updatedPolicy.id}`,
+          ipAddress: req.ip || '127.0.0.1',
+          userAgent: req.headers['user-agent'] || 'Unknown',
+          pingProduct: 'PingAM',
+          detailsJson: {
+            policyId: updatedPolicy.id,
+            targetRelationship: updatedPolicy.targetRelationship,
+            eventTrigger: updatedPolicy.eventTrigger,
+            boundAssetsCount: assetIds ? assetIds.length : 0
+          }
+        }
+      });
+
+      telemetry.publish({
+        pingProduct: 'PingAM',
+        action: 'POLICY_ENGINE_SYNCED',
+        details: {
+          policyId: updatedPolicy.id,
+          targetRelationship: updatedPolicy.targetRelationship,
+          eventTrigger: updatedPolicy.eventTrigger,
+          requiresVerifier: updatedPolicy.requiresVerifier,
+          timeDelayHours: updatedPolicy.timeDelayHours
+        }
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Conditional access policy updated successfully',
+        data: updatedPolicy,
+        timestamp: new Date().toISOString(),
+        requestId
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 export const policyController = new PolicyController();

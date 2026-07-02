@@ -75,6 +75,38 @@ export class DashboardController {
         lowPct = Math.round((lowCount / total) * 100);
       }
 
+      // Fetch Trusted Access Dashboard metrics
+      const sharedAssetsCount = await prisma.emergencyAccessGrant.count({
+        where: {
+          request: { requesterPingId: userPingId },
+          expiresAt: { gt: new Date() },
+          isRevoked: false
+        }
+      });
+
+      const pendingRequestsSubmittedCount = await prisma.emergencyRequest.count({
+        where: {
+          requesterPingId: userPingId,
+          status: { in: ['SUBMITTED', 'UNDER_VERIFIER_REVIEW'] }
+        }
+      });
+
+      const requestsAwaitingMyApprovalCount = await prisma.emergencyRequest.count({
+        where: {
+          ownerPingId: userPingId,
+          status: { in: ['SUBMITTED', 'UNDER_VERIFIER_REVIEW'] }
+        }
+      });
+
+      const trustedConnectionsCount = await prisma.emergencyContact.count({
+        where: {
+          OR: [
+            { ownerPingId: userPingId, verificationStatus: 'VERIFIED' },
+            { contactPingId: userPingId, verificationStatus: 'VERIFIED' }
+          ]
+        }
+      });
+
       res.status(200).json({
         success: true,
         message: 'Owner dashboard summary calculated successfully',
@@ -88,7 +120,11 @@ export class DashboardController {
             critical: criticalPct,
             medium: mediumPct,
             low: lowPct
-          }
+          },
+          sharedAssetsCount,
+          pendingRequestsSubmittedCount,
+          requestsAwaitingMyApprovalCount,
+          trustedConnectionsCount
         },
         timestamp: new Date().toISOString(),
         requestId

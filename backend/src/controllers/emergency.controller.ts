@@ -13,17 +13,49 @@ export class EmergencyController {
   public create = async (req: UserRequest, res: Response, next: NextFunction): Promise<void> => {
     const requestId = crypto.randomUUID();
     try {
-      const { policyId, ownerPingId, requesterPingId, urgencyReason } = req.body;
+      const { policyId, ownerPingId, urgencyReason } = req.body;
+      const requesterPingId = req.user?.sub;
+
+      if (!requesterPingId) {
+        res.status(401).json({
+          success: false,
+          message: 'User session not found',
+          data: null,
+          timestamp: new Date().toISOString(),
+          requestId
+        });
+        return;
+      }
+
+      // Enforce Trusted Connection validation:
+      const connection = await prisma.emergencyContact.findFirst({
+        where: {
+          ownerPingId,
+          contactPingId: requesterPingId,
+          verificationStatus: 'VERIFIED'
+        }
+      });
+
+      if (!connection) {
+        res.status(403).json({
+          success: false,
+          message: 'Access Denied: You must be a verified trusted connection of this owner to claim emergency access.',
+          data: null,
+          timestamp: new Date().toISOString(),
+          requestId
+        });
+        return;
+      }
 
       // Validate policy exists
-      const policy = await prisma.policy.findUnique({
-        where: { id: policyId }
+      const policy = await prisma.policy.findFirst({
+        where: { id: policyId, ownerPingId }
       });
 
       if (!policy) {
         res.status(404).json({
           success: false,
-          message: 'Target access policy not found',
+          message: 'Target access policy not found under this owner profile',
           data: null,
           timestamp: new Date().toISOString(),
           requestId
@@ -40,7 +72,17 @@ export class EmergencyController {
           status: 'SUBMITTED'
         },
         include: {
-          policy: true
+          policy: true,
+          requester: true
+        }
+      });
+
+      // Send notification to Owner
+      await prisma.notification.create({
+        data: {
+          userId: ownerPingId,
+          title: 'Emergency Access Claim Submitted',
+          message: `${request.requester.name} has submitted an emergency access request under the "${policy.name}" policy.`
         }
       });
 
@@ -159,7 +201,7 @@ export class EmergencyController {
 
       const request = await prisma.emergencyRequest.findUnique({
         where: { id },
-        include: { policy: true }
+        include: { policy: true, owner: true }
       });
 
       if (!request) {
@@ -235,6 +277,15 @@ export class EmergencyController {
         return r;
       });
 
+      // Send notification to the requester
+      await prisma.notification.create({
+        data: {
+          userId: request.requesterPingId,
+          title: 'Emergency Request Approved',
+          message: `Your access claim for ${request.owner.name}'s assets has been approved. Access is granted for ${durationHours} hours.`
+        }
+      });
+
       await prisma.auditLog.create({
         data: {
           actorPingId: approverPingId,
@@ -306,6 +357,20 @@ export class EmergencyController {
         where: { id },
         data: {
           status: 'REJECTED'
+        }
+      });
+
+      // Fetch owner name
+      const owner = await prisma.user.findUnique({
+        where: { id: request.ownerPingId }
+      });
+
+      // Send notification to the requester
+      await prisma.notification.create({
+        data: {
+          userId: request.requesterPingId,
+          title: 'Emergency Request Rejected',
+          message: `Your access claim for ${owner?.name || 'Owner'}'s assets has been declined by the owner.`
         }
       });
 

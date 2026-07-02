@@ -59,6 +59,7 @@ model User {
   emergencyRequests EmergencyRequest[] @relation("Requester")
   ownedRequests     EmergencyRequest[] @relation("Owner")
   verifierRequests  EmergencyRequest[] @relation("Verifier")
+  notifications     Notification[]
 }
 
 model Asset {
@@ -181,4 +182,17 @@ model AuditLog {
   @@index([actorPingId])
   @@index([action])
   @@index([timestamp])
+}
+
+model Notification {
+  id          String    @id @default(uuid())
+  userId      String
+  title       String
+  message     String
+  isRead      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

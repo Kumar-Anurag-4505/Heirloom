@@ -145,5 +145,65 @@ export class AssetService {
       }
     });
   }
+
+  public async updateAsset(params: {
+    assetId: string;
+    ownerPingId: string;
+    title: string;
+    description?: string;
+    category: AssetCategory;
+    sensitivityRisk: RiskLevel;
+    plaintextPayload?: string;
+    ipAddress: string;
+    userAgent: string;
+  }): Promise<Asset> {
+    const existingAsset = await assetRepository.findById(params.assetId);
+    if (!existingAsset) {
+      throw new Error('Asset not found');
+    }
+
+    if (existingAsset.ownerPingId !== params.ownerPingId) {
+      throw new Error('Unauthorized asset modification request');
+    }
+
+    let encryptedPayload = existingAsset.encryptedPayload;
+    if (params.plaintextPayload !== undefined) {
+      if (params.plaintextPayload) {
+        encryptedPayload = cryptoService.encrypt(params.plaintextPayload);
+      } else {
+        encryptedPayload = null;
+      }
+    }
+
+    const updatedAsset = await prisma.asset.update({
+      where: { id: params.assetId },
+      data: {
+        title: params.title,
+        description: params.description,
+        category: params.category,
+        sensitivityRisk: params.sensitivityRisk,
+        encryptedPayload
+      }
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorPingId: params.ownerPingId,
+        action: 'ASSET_UPDATED',
+        resource: `Asset:${updatedAsset.id}`,
+        ipAddress: params.ipAddress,
+        userAgent: params.userAgent,
+        pingProduct: 'PingDS',
+        detailsJson: {
+          assetId: updatedAsset.id,
+          category: updatedAsset.category,
+          sensitivity: updatedAsset.sensitivityRisk,
+          isEncrypted: !!encryptedPayload
+        }
+      }
+    });
+
+    return updatedAsset;
+  }
 }
 export const assetService = new AssetService();
