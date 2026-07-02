@@ -12,7 +12,9 @@ frontend/out/
 # Environment Variables & Secrets
 .env
 backend/.env
+backend/env
 frontend/.env
+frontend/.env.local
 *.env.local
 
 # Database files
