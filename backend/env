@@ -1,4 +1,0 @@
-PORT=3001
-DATABASE_URL="postgresql://postgres:postgrespassword@127.0.0.1:5432/heirloom?schema=public"
-JWT_SECRET="heirloom-super-secret-key-change-in-production"
-NODE_ENV="development"
